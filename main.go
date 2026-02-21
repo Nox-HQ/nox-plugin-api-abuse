@@ -44,7 +44,7 @@ var rules = []abuseRule{
 		Patterns: map[string][]*regexp.Regexp{
 			".go": {
 				regexp.MustCompile(`func\s+\w+\s*\(\s*w\s+http\.ResponseWriter\s*,\s*r\s+\*http\.Request\s*\)`),
-				regexp.MustCompile(`(?i)http\.HandleFunc\s*\(\s*["']/(?!health|ready|alive)`),
+				regexp.MustCompile(`(?i)http\.HandleFunc\s*\(\s*["']/`),
 			},
 			".py": {
 				regexp.MustCompile(`(?i)def\s+\w+\s*\(\s*request\s*[,)]`),
@@ -174,7 +174,7 @@ type mitigationCheck struct {
 
 // mitigations are file-wide patterns that indicate proper security controls.
 var mitigations = []mitigationCheck{
-	{"API-ABUSE-001", regexp.MustCompile(`(?i)(?:authMiddleware|requireAuth|isAuthenticated|jwt\.verify|passport\.authenticate|@login_required|@requires_auth|@permission_required)`)},
+	{"API-ABUSE-001", regexp.MustCompile(`(?i)(?:authMiddleware|requireAuth|isAuthenticated|jwt\.verify|passport\.authenticate|@login_required|@requires_auth|@permission_required|/health|/ready|/alive)`)},
 	{"API-ABUSE-003", regexp.MustCompile(`(?i)(?:rate_limit|ratelimit|throttle|limiter|RateLimiter|slowDown)`)},
 }
 
@@ -254,7 +254,7 @@ func scanFile(_ context.Context, resp *sdk.ResponseBuilder, filePath, ext string
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var lines []string
 	scanner := bufio.NewScanner(f)
@@ -331,12 +331,17 @@ func extToLanguage(ext string) string {
 }
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	srv := buildServer()
 	if err := srv.Serve(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "nox-plugin-api-abuse: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
