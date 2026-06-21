@@ -163,6 +163,27 @@ var rules = []abuseRule{
 			},
 		},
 	},
+	{
+		ID:         "API-ABUSE-006",
+		Severity:   sdk.SeverityHigh,
+		Confidence: sdk.ConfidenceMedium,
+		Message:    "BFLA risk: privileged/admin route without a role authorization check",
+		CWE:        "CWE-285",
+		Patterns: map[string][]*regexp.Regexp{
+			".go": {
+				regexp.MustCompile(`(?i)(?:HandleFunc|\.(?:GET|POST|PUT|DELETE))\s*\(\s*["'][^"']*/(?:admin|internal|manage|superuser)`),
+			},
+			".py": {
+				regexp.MustCompile(`(?i)@app\.(?:route|get|post|put|delete)\s*\(\s*["'][^"']*/(?:admin|internal|manage|superuser)`),
+			},
+			".js": {
+				regexp.MustCompile(`(?i)(?:app|router)\.(?:get|post|put|delete|patch)\s*\(\s*['"][^'"]*/(?:admin|internal|manage|superuser)`),
+			},
+			".ts": {
+				regexp.MustCompile(`(?i)(?:app|router)\.(?:get|post|put|delete|patch)\s*\(\s*['"][^'"]*/(?:admin|internal|manage|superuser)`),
+			},
+		},
+	},
 }
 
 // mitigationCheck allows suppressing findings when a mitigation pattern is
@@ -173,9 +194,18 @@ type mitigationCheck struct {
 }
 
 // mitigations are file-wide patterns that indicate proper security controls.
+var authMitigation = regexp.MustCompile(`(?i)(?:authMiddleware|requireAuth|isAuthenticated|jwt\.verify|passport\.authenticate|@login_required|@requires_auth|@permission_required|current_user|c\.Get\(["']user|middleware\.Auth|/health|/ready|/alive)`)
+
+var roleMitigation = regexp.MustCompile(`(?i)(?:requireRole|hasRole|require_role|is_admin|isAdmin|@admin_required|@role_required|RequireAdmin|check_permission|hasPermission)`)
+
 var mitigations = []mitigationCheck{
-	{"API-ABUSE-001", regexp.MustCompile(`(?i)(?:authMiddleware|requireAuth|isAuthenticated|jwt\.verify|passport\.authenticate|@login_required|@requires_auth|@permission_required|/health|/ready|/alive)`)},
+	{"API-ABUSE-001", authMitigation},
+	// A role/permission check implies the request is authenticated.
+	{"API-ABUSE-001", roleMitigation},
 	{"API-ABUSE-003", regexp.MustCompile(`(?i)(?:rate_limit|ratelimit|throttle|limiter|RateLimiter|slowDown)`)},
+	// BFLA is mitigated by either an authn or an explicit role/permission check.
+	{"API-ABUSE-006", roleMitigation},
+	{"API-ABUSE-006", authMitigation},
 }
 
 // supportedExtensions lists file extensions that the scanner processes.
