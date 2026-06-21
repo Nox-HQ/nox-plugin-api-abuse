@@ -207,3 +207,39 @@ func findByRule(findings []*pluginv1.Finding, ruleID string) []*pluginv1.Finding
 	}
 	return result
 }
+
+func safeDir(t *testing.T) string {
+	t.Helper()
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("unable to determine test file path")
+	}
+	return filepath.Join(filepath.Dir(filename), "testdata", "safe")
+}
+
+// TestBFLADetected: an admin route without a role check is flagged.
+func TestBFLADetected(t *testing.T) {
+	client := testClient(t)
+	resp := invokeScan(t, client, testdataDir(t))
+	found := findByRule(resp.GetFindings(), "API-ABUSE-006")
+	if len(found) == 0 {
+		t.Fatal("expected API-ABUSE-006 (BFLA) on admin route without role check")
+	}
+	if got := found[0].GetMetadata()["cwe"]; got != "CWE-285" {
+		t.Errorf("expected CWE-285, got %q", got)
+	}
+}
+
+// TestSafeHandlersNoFindings is the FP guard: properly-controlled handlers
+// (role-checked admin routes, authenticated handlers, rate-limited login)
+// must produce ZERO findings via the mitigation mechanism.
+func TestSafeHandlersNoFindings(t *testing.T) {
+	client := testClient(t)
+	resp := invokeScan(t, client, safeDir(t))
+	if n := len(resp.GetFindings()); n != 0 {
+		for _, f := range resp.GetFindings() {
+			t.Logf("unexpected: %s at line %d", f.GetRuleId(), f.GetLocation().GetStartLine())
+		}
+		t.Fatalf("expected 0 findings on mitigated handlers, got %d", n)
+	}
+}

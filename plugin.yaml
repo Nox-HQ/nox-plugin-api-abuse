@@ -1,5 +1,5 @@
 name: nox-plugin-api-abuse
-version: 0.1.0
+version: 0.3.0
 track: dynamic-runtime
 description: Detect API authorization flaws, BOLA vulnerabilities, and abuse patterns in server code
 tools:
