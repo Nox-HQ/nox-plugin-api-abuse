@@ -36,10 +36,14 @@ type abuseRule struct {
 // API-ABUSE-005: Verbose error responses leaking internals.
 var rules = []abuseRule{
 	{
-		ID:         "API-ABUSE-001",
-		Severity:   sdk.SeverityHigh,
-		Confidence: sdk.ConfidenceHigh,
-		Message:    "Missing authentication check on handler",
+		ID:       "API-ABUSE-001",
+		Severity: sdk.SeverityHigh,
+		// Medium, not High: whether an endpoint is MEANT to be public cannot be
+		// read from source. The rule can see that a handler touches data with
+		// no visible auth; it cannot see intent, and claiming High confidence
+		// for a judgement it cannot make is what made this unactionable.
+		Confidence: sdk.ConfidenceMedium,
+		Message:    "Handler performs a sensitive operation with no visible authentication check",
 		CWE:        "CWE-306",
 		Patterns: map[string][]*regexp.Regexp{
 			".go": {
@@ -325,6 +329,14 @@ func scanFile(_ context.Context, resp *sdk.ResponseBuilder, filePath, ext string
 			}
 
 			if mitigated[rule.ID] {
+				continue
+			}
+
+			// A handler with no auth is only worth reporting if it does
+			// something. Without this the rule fires on every handler in every
+			// Go web codebase — 17 of 17 in nox's precision corpus, clean
+			// fixtures included.
+			if rule.ID == "API-ABUSE-001" && !handlerBodyIsSensitive(lines, lineNum, ext) {
 				continue
 			}
 
