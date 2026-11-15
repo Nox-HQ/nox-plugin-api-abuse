@@ -1,5 +1,7 @@
 # nox-plugin-api-abuse
 
+[![nox security grade](.github/nox-badge.svg)](https://github.com/nox-hq/nox)
+
 **Detect API authorization flaws, BOLA vulnerabilities, and abuse patterns in server code.**
 
 <!-- badges -->
@@ -33,7 +35,7 @@ A Node.js developer writes `User.create(req.body)` or a Go developer writes `jso
 
 ### Error Leakage Audit
 
-Before a penetration test, your team wants to ensure that no API endpoint returns raw error messages, stack traces, or internal exception details to clients. This plugin scans for patterns like `http.Error(w, err.Error(), 500)` and `res.json({ error: err.stack })` that would expose internals.
+Before a penetration test, your team wants to ensure that no API endpoint returns raw error messages, stack traces, or internal exception details to clients. This plugin scans for patterns like `http.Error(w, err.Error(), 500)` and `res.json({ error: err.stack })` that would expose internals. <!-- nox:ignore AI-013 -- documentation of the error-leak patterns this plugin detects, not code -->
 
 ## 5-Minute Demo
 
@@ -149,7 +151,7 @@ Before a penetration test, your team wants to ensure that no API endpoint return
 | Language | Extensions | Detection Scope |
 |----------|-----------|-----------------|
 | Go | `.go` | HTTP handlers, `Query`/`Param`/`FormValue` usage, `json.NewDecoder` binding, `http.Error` with `err.Error()` |
-| Python | `.py` | Flask/Django views, `request.args`/`request.json` usage, `**request.json` spreading, `traceback`/`str(e)` in responses |
+| Python | `.py` | Flask/Django views, `request.args`/`request.json` usage, `**request.json` spreading, `traceback`/`str(e)` in responses | <!-- nox:ignore AI-013 -- documentation of the error-leak patterns this plugin detects, not code -->
 | JavaScript | `.js` | Express routes, `req.params`/`req.body` usage, `create(req.body)` binding, `err.stack`/`err.message` in responses |
 | TypeScript | `.ts` | Express routes, `req.params`/`req.body` usage, `create(req.body)` binding, `err.stack`/`err.message` in responses |
 
